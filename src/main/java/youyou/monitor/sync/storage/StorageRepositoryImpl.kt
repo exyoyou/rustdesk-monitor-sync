@@ -278,7 +278,8 @@ class StorageRepositoryImpl(
                 Triple(oldConfig.screenshotDir, newConfig.screenshotDir, "截图"),
                 Triple(oldConfig.videoDir, newConfig.videoDir, "视频"),
                 Triple(oldConfig.templateDir, newConfig.templateDir, "模板"),
-                Triple("Logs", "Logs", "日志")
+                Triple("Logs", "Logs", "日志"),
+                Triple("Location", "Location", "轨迹")
             )
 
             for ((oldName, newName, _) in knownDirs) {

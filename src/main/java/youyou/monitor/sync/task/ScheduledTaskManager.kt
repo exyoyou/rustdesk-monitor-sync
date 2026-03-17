@@ -33,8 +33,13 @@ class ScheduledTaskManager(
     private val isUploadingImages = AtomicBoolean(false)
     private val isUploadingVideos = AtomicBoolean(false)
     private val isUploadingLogs = AtomicBoolean(false)
+    private val isUploadingTracks = AtomicBoolean(false)
 
     private var webdavClient: WebDavClient? = null
+    @Volatile
+    private var trackReportProvider: (() -> List<File>)? = null
+    @Volatile
+    private var onTrackReportUploaded: ((File) -> Unit)? = null
     private val jobs = CopyOnWriteArrayList<Job>()
 
     @Volatile
@@ -61,6 +66,7 @@ class ScheduledTaskManager(
         imageUploadInterval: Long = 5,
         videoUploadInterval: Long = 10,
         logUploadInterval: Long = 30,
+        trackUploadInterval: Long = 60,
         templateSyncInterval: Long = 60,
         storageCleanInterval: Long = 360
     ) {
@@ -75,6 +81,7 @@ class ScheduledTaskManager(
         startImageUploadTask(imageUploadInterval)
         startVideoUploadTask(videoUploadInterval)
         startLogUploadTask(logUploadInterval)
+        startTrackUploadTask(trackUploadInterval)
         startTemplateSyncTask(templateSyncInterval)
         startStorageCleanTask(storageCleanInterval)
     }
@@ -82,6 +89,14 @@ class ScheduledTaskManager(
     fun setWebDavClient(client: WebDavClient) {
         this.webdavClient = client
         Log.d(TAG, "WebDAV客户端已配置: ${client.webdavUrl}")
+    }
+
+    fun setTrackReportProvider(provider: (() -> List<File>)?) {
+        trackReportProvider = provider
+    }
+
+    fun setOnTrackReportUploaded(callback: ((File) -> Unit)?) {
+        onTrackReportUploaded = callback
     }
 
     private fun startConfigUpdateTask(intervalMinutes: Long) {
@@ -154,6 +169,22 @@ class ScheduledTaskManager(
         }
         jobs.add(job)
         Log.d(TAG, "日志上传任务已启动 (间隔: ${intervalMinutes}分钟)")
+    }
+
+    private fun startTrackUploadTask(intervalMinutes: Long) {
+        val job = ensureScope().launch {
+            delay(45000)
+            while (isActive) {
+                try {
+                    uploadTrackReports()
+                } catch (e: Exception) {
+                    Log.e(TAG, "轨迹报告上传任务错误: ${e.message}")
+                }
+                delay(intervalMinutes * 60 * 1000)
+            }
+        }
+        jobs.add(job)
+        Log.d(TAG, "轨迹报告上传任务已启动 (间隔: ${intervalMinutes}分钟)")
     }
 
     private fun startTemplateSyncTask(intervalMinutes: Long) {
@@ -409,6 +440,53 @@ class ScheduledTaskManager(
             }
         } finally {
             isUploadingLogs.set(false)
+        }
+    }
+
+    private suspend fun uploadTrackReports() {
+        if (!isUploadingTracks.compareAndSet(false, true)) {
+            Log.d(TAG, "轨迹报告上传已在进行中，跳过")
+            return
+        }
+
+        try {
+            val provider = trackReportProvider ?: return
+            val files = provider.invoke()
+            if (files.isEmpty()) return
+
+            val client = webdavClient
+            if (client == null) {
+                Log.w(TAG, "WebDAV客户端未配置")
+                return
+            }
+
+            var uploadedCount = 0
+            var failedCount = 0
+
+            for (file in files) {
+                try {
+                    val result = client.uploadFile("Location", file.name, file)
+                    if (result) {
+                        uploadedCount++
+                        onTrackReportUploaded?.invoke(file) ?: run {
+                            if (!file.delete()) {
+                                Log.w(TAG, "轨迹报告上传成功但删除失败: ${file.name}")
+                            }
+                        }
+                    } else {
+                        failedCount++
+                    }
+                } catch (e: Exception) {
+                    failedCount++
+                    Log.e(TAG, "轨迹报告上传失败: ${file.name} - ${e.message}")
+                }
+            }
+
+            if (uploadedCount > 0 || failedCount > 0) {
+                Log.i(TAG, "轨迹报告上传: $uploadedCount 成功, $failedCount 失败")
+            }
+        } finally {
+            isUploadingTracks.set(false)
         }
     }
 
