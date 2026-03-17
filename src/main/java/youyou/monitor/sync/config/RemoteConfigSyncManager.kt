@@ -2,6 +2,7 @@ package youyou.monitor.sync.config
 
 import org.json.JSONObject
 import java.util.concurrent.ConcurrentHashMap
+import youyou.monitor.config.model.LocationTrackConfig
 import youyou.monitor.config.model.MonitorConfig
 import youyou.monitor.config.model.WebDavServer
 import youyou.monitor.logger.Log
@@ -194,6 +195,21 @@ class RemoteConfigSyncManager(
             }
         }
 
+        val locationObj = obj.optJSONObject("locationTrack")
+        val locationTrack = LocationTrackConfig(
+            needAddress = locationObj?.optBoolean("needAddress", true) ?: true,
+            adaptiveInterval = locationObj?.optBoolean("adaptiveInterval", true) ?: true,
+            movingIntervalMs = locationObj?.optLong("movingIntervalMs", 10_000L) ?: 10_000L,
+            staticIntervalMs = locationObj?.optLong("staticIntervalMs", 60_000L) ?: 60_000L,
+            movementThresholdMeters = locationObj?.optDouble("movementThresholdMeters", 30.0) ?: 30.0,
+            maxAcceptAccuracyMeters =
+                (locationObj?.optDouble("maxAcceptAccuracyMeters", 120.0) ?: 120.0).toFloat(),
+            rawRetentionDays = locationObj?.optInt("rawRetentionDays", 2) ?: 2,
+            rawDedupMinDistanceMeters =
+                locationObj?.optDouble("rawDedupMinDistanceMeters", 8.0) ?: 8.0,
+            rawDedupMinIntervalMs = locationObj?.optLong("rawDedupMinIntervalMs", 15_000L) ?: 15_000L
+        )
+
         return MonitorConfig(
             matchThreshold = obj.optDouble("matchThreshold", 0.92),
             matchCooldownMs = obj.optLong("matchCooldownMs", 3000L),
@@ -205,6 +221,7 @@ class RemoteConfigSyncManager(
             matcherType = obj.optString("matcherType", "grayscale"),
             preferExternalStorage = obj.optBoolean("preferExternalStorage", false),
             rootDir = obj.optString("rootDir", "PingerLove"),
+            locationTrack = locationTrack,
             webdavServers = webdavServers
         )
     }
