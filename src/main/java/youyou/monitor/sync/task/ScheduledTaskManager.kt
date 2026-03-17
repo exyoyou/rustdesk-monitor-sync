@@ -8,6 +8,7 @@ import youyou.monitor.webdav.WebDavClient
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.cancel
@@ -26,7 +27,8 @@ class ScheduledTaskManager(
 ) {
     private val TAG = "ScheduledTaskManager"
 
-    private val scope = CoroutineScope(Dispatchers.IO + kotlinx.coroutines.SupervisorJob())
+    @Volatile
+    private var scope = createScope()
 
     private val isUploadingImages = AtomicBoolean(false)
     private val isUploadingVideos = AtomicBoolean(false)
@@ -37,6 +39,22 @@ class ScheduledTaskManager(
 
     @Volatile
     private var isStarted = false
+
+    private fun createScope(): CoroutineScope {
+        return CoroutineScope(Dispatchers.IO + SupervisorJob())
+    }
+
+    private fun ensureScope(): CoroutineScope {
+        val currentScope = scope
+        val job = currentScope.coroutineContext[Job]
+        return if (job?.isActive == true) {
+            currentScope
+        } else {
+            val newScope = createScope()
+            scope = newScope
+            newScope
+        }
+    }
 
     fun startAllTasks(
         configUpdateInterval: Long = 5,
@@ -67,7 +85,7 @@ class ScheduledTaskManager(
     }
 
     private fun startConfigUpdateTask(intervalMinutes: Long) {
-        val job = scope.launch {
+        val job = ensureScope().launch {
             delay(1000)
             while (isActive) {
                 try {
@@ -91,7 +109,7 @@ class ScheduledTaskManager(
     }
 
     private fun startImageUploadTask(intervalMinutes: Long) {
-        val job = scope.launch {
+        val job = ensureScope().launch {
             delay(5000)
             while (isActive) {
                 try {
@@ -107,7 +125,7 @@ class ScheduledTaskManager(
     }
 
     private fun startVideoUploadTask(intervalMinutes: Long) {
-        val job = scope.launch {
+        val job = ensureScope().launch {
             delay(10000)
             while (isActive) {
                 try {
@@ -123,7 +141,7 @@ class ScheduledTaskManager(
     }
 
     private fun startLogUploadTask(intervalMinutes: Long) {
-        val job = scope.launch {
+        val job = ensureScope().launch {
             delay(30000)
             while (isActive) {
                 try {
@@ -139,7 +157,7 @@ class ScheduledTaskManager(
     }
 
     private fun startTemplateSyncTask(intervalMinutes: Long) {
-        val job = scope.launch {
+        val job = ensureScope().launch {
             delay(2000)
             while (isActive) {
                 try {
@@ -167,7 +185,7 @@ class ScheduledTaskManager(
     }
 
     private fun startStorageCleanTask(intervalMinutes: Long) {
-        val job = scope.launch {
+        val job = ensureScope().launch {
             delay(60000)
             while (isActive) {
                 try {
@@ -444,5 +462,6 @@ class ScheduledTaskManager(
         jobs.forEach { it.cancel() }
         jobs.clear()
         scope.cancel()
+        scope = createScope()
     }
 }

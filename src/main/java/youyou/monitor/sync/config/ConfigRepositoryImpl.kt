@@ -69,6 +69,10 @@ class ConfigRepositoryImpl(
         Log.d(TAG, "DeviceIdProvider已配置")
     }
 
+    fun createWebDavClient(server: WebDavServer): WebDavClient {
+        return WebDavClient.fromServer(server, deviceIdProvider)
+    }
+
     fun setOnWebDavServersChanged(callback: (List<WebDavServer>, WebDavServer?, WebDavClient?) -> Unit) {
         onWebDavServersChanged = callback
         Log.d(TAG, "WebDAV服务器变化回调已注册")
