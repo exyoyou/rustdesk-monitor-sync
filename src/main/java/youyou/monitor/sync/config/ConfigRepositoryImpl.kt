@@ -46,7 +46,7 @@ class ConfigRepositoryImpl(
             .mapCatching { result ->
                 delegate.updateConfig(result.config)
 
-                webdavClient?.takeIf { it !== result.fastestClient }?.close()
+                // 不立即关闭旧客户端，避免正在传输时被中断。
                 webdavClient = result.fastestClient
                 onWebDavServersChanged?.invoke(
                     result.config.webdavServers,
@@ -58,7 +58,7 @@ class ConfigRepositoryImpl(
     }
 
     fun setWebDavClient(client: WebDavClient) {
-        webdavClient?.takeIf { it !== client }?.close()
+        // 不立即关闭旧客户端，避免正在传输时被中断。
         webdavClient = client
         Log.d(TAG, "WebDAV客户端已配置")
     }
