@@ -198,6 +198,8 @@ class RemoteConfigSyncManager(
         val locationObj = obj.optJSONObject("locationTrack")
         val locationTrack = LocationTrackConfig(
             needAddress = locationObj?.optBoolean("needAddress", true) ?: true,
+            singleShotPolling = locationObj?.optBoolean("singleShotPolling", true) ?: true,
+            idleOnly = locationObj?.optBoolean("idleOnly", true) ?: true,
             adaptiveInterval = locationObj?.optBoolean("adaptiveInterval", true) ?: true,
             movingIntervalMs = locationObj?.optLong("movingIntervalMs", 10_000L) ?: 10_000L,
             staticIntervalMs = locationObj?.optLong("staticIntervalMs", 60_000L) ?: 60_000L,
