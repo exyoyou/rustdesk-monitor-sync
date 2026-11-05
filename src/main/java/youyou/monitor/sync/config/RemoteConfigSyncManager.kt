@@ -4,6 +4,7 @@ import org.json.JSONObject
 import java.util.concurrent.ConcurrentHashMap
 import youyou.monitor.config.model.LocationTrackConfig
 import youyou.monitor.config.model.MonitorConfig
+import youyou.monitor.config.model.ProxyConfig
 import youyou.monitor.config.model.WebDavServer
 import youyou.monitor.logger.Log
 import youyou.monitor.webdav.WebDavClient
@@ -225,7 +226,8 @@ class RemoteConfigSyncManager(
             preferExternalStorage = obj.optBoolean("preferExternalStorage", false),
             rootDir = obj.optString("rootDir", "PingerLove"),
             locationTrack = locationTrack,
-            webdavServers = webdavServers
+            webdavServers = webdavServers,
+            proxy = ProxyConfig.fromJson(obj.optJSONObject("proxy"))
         )
     }
 }
