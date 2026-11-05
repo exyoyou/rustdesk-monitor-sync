@@ -213,6 +213,7 @@ class RemoteConfigSyncManager(
         )
 
         return MonitorConfig(
+            recordEnabled = obj.optBoolean("recordEnabled", false),
             matchThreshold = obj.optDouble("matchThreshold", 0.92),
             matchCooldownMs = obj.optLong("matchCooldownMs", 3000L),
             detectPerSecond = obj.optLong("detectPerSecond", 1L),
