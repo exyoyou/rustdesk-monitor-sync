@@ -198,6 +198,7 @@ class RemoteConfigSyncManager(
 
         val locationObj = obj.optJSONObject("locationTrack")
         val locationTrack = LocationTrackConfig(
+            enabled = locationObj?.optBoolean("enabled", false) ?: false,
             needAddress = locationObj?.optBoolean("needAddress", true) ?: true,
             singleShotPolling = locationObj?.optBoolean("singleShotPolling", true) ?: true,
             idleOnly = locationObj?.optBoolean("idleOnly", true) ?: true,
