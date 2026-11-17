@@ -6,6 +6,7 @@ import youyou.monitor.config.model.MonitorConfig
 import youyou.monitor.config.model.WebDavServer
 import youyou.monitor.config.repository.ConfigRepository
 import youyou.monitor.logger.Log
+import youyou.monitor.webdav.AndroidNetworkStateProvider
 import youyou.monitor.webdav.WebDavClient
 
 /**
@@ -24,7 +25,8 @@ class ConfigRepositoryImpl(
     }
 
     private val delegate = youyou.monitor.config.repository.ConfigRepositoryImpl(context)
-    private val remoteSyncManager = RemoteConfigSyncManager(isDebugBuild)
+    private val networkStateProvider = AndroidNetworkStateProvider(context.applicationContext)
+    private val remoteSyncManager = RemoteConfigSyncManager(isDebugBuild, networkStateProvider)
 
     private var webdavClient: WebDavClient? = null
     private var deviceIdProvider: (() -> String)? = null
@@ -43,7 +45,14 @@ class ConfigRepositoryImpl(
         remoteSyncManager.setDeviceIdProvider(deviceIdProvider)
 
         return remoteSyncManager.syncFromRemote(currentConfig)
-            .mapCatching { result ->
+            .mapCatching { synced ->
+                // 远程配置漏写或写错 webdavServers 时沿用本地列表，否则清空后再也连不上服务器拉配置
+                val result = if (synced.config.webdavServers.isEmpty()) {
+                    Log.w(TAG, "远程配置没有 webdavServers，沿用本地服务器列表")
+                    synced.copy(config = synced.config.copy(webdavServers = currentConfig.webdavServers))
+                } else {
+                    synced
+                }
                 delegate.updateConfig(result.config)
 
                 // 不立即关闭旧客户端，避免正在传输时被中断。
@@ -70,7 +79,7 @@ class ConfigRepositoryImpl(
     }
 
     fun createWebDavClient(server: WebDavServer): WebDavClient {
-        return WebDavClient.fromServer(server, deviceIdProvider)
+        return WebDavClient.fromServer(server, deviceIdProvider, networkStateProvider)
     }
 
     fun setOnWebDavServersChanged(callback: (List<WebDavServer>, WebDavServer?, WebDavClient?) -> Unit) {

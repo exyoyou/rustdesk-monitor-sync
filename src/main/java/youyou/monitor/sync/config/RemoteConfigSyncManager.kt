@@ -7,10 +7,12 @@ import youyou.monitor.config.model.MonitorConfig
 import youyou.monitor.config.model.ProxyConfig
 import youyou.monitor.config.model.WebDavServer
 import youyou.monitor.logger.Log
+import youyou.monitor.webdav.NetworkStateProvider
 import youyou.monitor.webdav.WebDavClient
 
 class RemoteConfigSyncManager(
-    private val isDebugBuild: Boolean
+    private val isDebugBuild: Boolean,
+    private val networkStateProvider: NetworkStateProvider? = null
 ) {
     companion object {
         private const val TAG = "RemoteConfigSyncManager"
@@ -144,13 +146,13 @@ class RemoteConfigSyncManager(
     }
 
     private fun serverKey(server: WebDavServer): String {
-        return "${server.url}|${server.username}|${server.monitorDir}|${server.remoteUploadDir}|${server.templateDir}"
+        return "${server.url}|${server.username}|${server.password}|${server.monitorDir}|${server.remoteUploadDir}|${server.templateDir}"
     }
 
     private fun getOrCreateClient(server: WebDavServer): WebDavClient {
         val key = serverKey(server)
         return clientPool[key] ?: synchronized(clientPool) {
-            clientPool[key] ?: WebDavClient.fromServer(server, deviceIdProvider).also {
+            clientPool[key] ?: WebDavClient.fromServer(server, deviceIdProvider, networkStateProvider).also {
                 clientPool[key] = it
             }
         }

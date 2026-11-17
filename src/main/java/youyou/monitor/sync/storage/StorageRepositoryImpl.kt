@@ -249,12 +249,7 @@ class StorageRepositoryImpl(
                 File(context.filesDir, oldConfig.rootDir)
             }
 
-            val newBaseDir = if (newConfig.preferExternalStorage) {
-                File("/storage/emulated/0", newConfig.rootDir)
-            } else {
-                File(context.filesDir, newConfig.rootDir)
-            }
-            if (!newBaseDir.exists()) newBaseDir.mkdirs()
+            val newBaseDir = getConfigRootDir(newConfig)
 
             manageNomediaFile(getRootDir(), newConfig.preferExternalStorage)
             if (oldBaseDir.absolutePath == newBaseDir.absolutePath &&
