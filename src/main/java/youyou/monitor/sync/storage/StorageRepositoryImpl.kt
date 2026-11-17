@@ -23,6 +23,7 @@ class StorageRepositoryImpl(
         const val TAG = "StorageRepository"
         private const val PREFS_NAME = "migration_failures"
         private const val KEY_FAILED_MIGRATIONS = "failed_migrations"
+        private const val JPEG_QUALITY = 80
     }
 
     private val scope = CoroutineScope(Dispatchers.Default + SupervisorJob())
@@ -93,15 +94,21 @@ class StorageRepositoryImpl(
                     if (!exists()) mkdirs()
                 }
 
+                // 按文件名后缀选格式：.png 无损（大、慢），其它按 JPEG 保存（截图默认 .jpg）
+                val ext = filename.substringAfterLast('.', "jpg")
                 val modifiedFilename = if (currentConfig.preferExternalStorage) {
-                    "${filename.substringBeforeLast('.')}.tmp_png"
+                    "${filename.substringBeforeLast('.')}.tmp_$ext"
                 } else {
                     filename
                 }
                 val file = File(dayDir, modifiedFilename)
 
                 FileOutputStream(file).use { out ->
-                    bitmap.compress(Bitmap.CompressFormat.PNG, 90, out)
+                    if (ext.equals("png", ignoreCase = true)) {
+                        bitmap.compress(Bitmap.CompressFormat.PNG, 100, out)
+                    } else {
+                        bitmap.compress(Bitmap.CompressFormat.JPEG, JPEG_QUALITY, out)
+                    }
                 }
 
                 Log.d(TAG, "截图已保存：${file.name}")
