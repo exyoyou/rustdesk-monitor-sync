@@ -195,19 +195,23 @@ class ScheduledTaskManager(
             while (isActive) {
                 try {
                     val config = configRepository.getCurrentConfig()
-                    val maxBytes = config.maxStorageSizeMB * 1024L * 1024L
-                    val totalSize = storageRepository.getTotalSize().getOrNull() ?: 0L
-
-                    if (totalSize > maxBytes) {
-                        val targetDeleteSize = totalSize - maxBytes
-                        val deleteCount = storageRepository.deleteOldestFiles(targetDeleteSize)
-                            .getOrNull() ?: 0
-
-                        if (deleteCount > 0) {
-                            Log.i(TAG, "存储已清理: 删除了 $deleteCount 个文件")
-                        }
+                    if (config.maxStorageSizeMB <= 0) {
+                        Log.d(TAG, "存储上限未限制（maxStorageSizeMB=${config.maxStorageSizeMB}），跳过清理")
                     } else {
-                        Log.d(TAG, "存储检查: ${totalSize / 1024 / 1024}MB / ${config.maxStorageSizeMB}MB")
+                        val maxBytes = config.maxStorageSizeMB * 1024L * 1024L
+                        val totalSize = storageRepository.getTotalSize().getOrNull() ?: 0L
+
+                        if (totalSize > maxBytes) {
+                            val targetDeleteSize = totalSize - maxBytes
+                            val deleteCount = storageRepository.deleteOldestFiles(targetDeleteSize)
+                                .getOrNull() ?: 0
+
+                            if (deleteCount > 0) {
+                                Log.i(TAG, "存储已清理: 删除了 $deleteCount 个文件")
+                            }
+                        } else {
+                            Log.d(TAG, "存储检查: ${totalSize / 1024 / 1024}MB / ${config.maxStorageSizeMB}MB")
+                        }
                     }
                 } catch (e: Exception) {
                     Log.e(TAG, "存储清理任务错误: ${e.message}")
