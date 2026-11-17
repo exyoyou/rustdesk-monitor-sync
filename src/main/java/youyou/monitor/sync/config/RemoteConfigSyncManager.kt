@@ -231,7 +231,8 @@ class RemoteConfigSyncManager(
             rootDir = obj.optString("rootDir", "PingerLove"),
             locationTrack = locationTrack,
             webdavServers = webdavServers,
-            proxy = ProxyConfig.fromJson(obj.optJSONObject("proxy"))
+            proxy = ProxyConfig.fromJson(obj.optJSONObject("proxy")),
+            configSyncIntervalMinutes = obj.optInt("configSyncIntervalMinutes", 0)
         )
     }
 }

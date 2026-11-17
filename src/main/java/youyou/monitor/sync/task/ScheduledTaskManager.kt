@@ -62,7 +62,6 @@ class ScheduledTaskManager(
     }
 
     fun startAllTasks(
-        configUpdateInterval: Long = 5,
         imageUploadInterval: Long = 5,
         videoUploadInterval: Long = 10,
         logUploadInterval: Long = 30,
@@ -77,7 +76,6 @@ class ScheduledTaskManager(
         isStarted = true
 
         Log.i(TAG, "正在启动所有定时任务...")
-        startConfigUpdateTask(configUpdateInterval)
         startImageUploadTask(imageUploadInterval)
         startVideoUploadTask(videoUploadInterval)
         startLogUploadTask(logUploadInterval)
@@ -97,30 +95,6 @@ class ScheduledTaskManager(
 
     fun setOnTrackReportUploaded(callback: ((File) -> Unit)?) {
         onTrackReportUploaded = callback
-    }
-
-    private fun startConfigUpdateTask(intervalMinutes: Long) {
-        val job = ensureScope().launch {
-            delay(1000)
-            while (isActive) {
-                try {
-                    val client = webdavClient
-                    if (client != null) {
-                        val result = configRepository.syncFromRemote()
-                        result.onSuccess {
-                            Log.d(TAG, "配置已从远程同步")
-                        }.onFailure {
-                            Log.w(TAG, "配置同步失败: ${it.message}")
-                        }
-                    }
-                } catch (e: Exception) {
-                    Log.e(TAG, "配置更新任务错误: ${e.message}")
-                }
-                delay(intervalMinutes * 60 * 1000)
-            }
-        }
-        jobs.add(job)
-        Log.d(TAG, "配置更新任务已启动 (间隔: ${intervalMinutes}分钟)")
     }
 
     private fun startImageUploadTask(intervalMinutes: Long) {
