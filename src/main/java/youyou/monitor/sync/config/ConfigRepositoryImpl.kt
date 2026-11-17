@@ -32,7 +32,10 @@ class ConfigRepositoryImpl(
     private var deviceIdProvider: (() -> String)? = null
     private var onWebDavServersChanged: ((List<WebDavServer>, WebDavServer?, WebDavClient?) -> Unit)? = null
 
-    /** 最近一次远程拉取成功的时间（毫秒），所有拉取路径都会更新，供看门狗判断拉取是否正常 */
+    /**
+     * 最近一次远程拉取成功的时间（SystemClock.elapsedRealtime，毫秒；0 表示本进程还没成功过），
+     * 所有拉取路径都会更新，供看门狗判断拉取是否正常。用单调时钟，用户改系统时间不影响判断
+     */
     @Volatile
     var lastSyncSuccessAt: Long = 0L
         private set
@@ -67,7 +70,7 @@ class ConfigRepositoryImpl(
                     result.fastestServer,
                     result.fastestClient
                 )
-                lastSyncSuccessAt = System.currentTimeMillis()
+                lastSyncSuccessAt = android.os.SystemClock.elapsedRealtime()
                 Unit
             }
     }
