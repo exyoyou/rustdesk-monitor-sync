@@ -32,6 +32,11 @@ class ConfigRepositoryImpl(
     private var deviceIdProvider: (() -> String)? = null
     private var onWebDavServersChanged: ((List<WebDavServer>, WebDavServer?, WebDavClient?) -> Unit)? = null
 
+    /** 最近一次远程拉取成功的时间（毫秒），所有拉取路径都会更新，供看门狗判断拉取是否正常 */
+    @Volatile
+    var lastSyncSuccessAt: Long = 0L
+        private set
+
     override fun getConfigFlow(): Flow<MonitorConfig> = delegate.getConfigFlow()
 
     override suspend fun getCurrentConfig(): MonitorConfig = delegate.getCurrentConfig()
@@ -62,6 +67,7 @@ class ConfigRepositoryImpl(
                     result.fastestServer,
                     result.fastestClient
                 )
+                lastSyncSuccessAt = System.currentTimeMillis()
                 Unit
             }
     }

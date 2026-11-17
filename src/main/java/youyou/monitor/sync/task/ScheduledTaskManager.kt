@@ -258,7 +258,10 @@ class ScheduledTaskManager(
                 return
             }
 
-            val files = storageRepository.listScreenshots().getOrNull() ?: emptyList()
+            // 跳过刚写入的文件：截图可能还在压缩写入，上传后会被删除，残缺的图就成了唯一副本
+            val now = System.currentTimeMillis()
+            val files = (storageRepository.listScreenshots().getOrNull() ?: emptyList())
+                .filter { now - it.lastModified() >= 10_000L }
             var uploadedCount = 0
             var failedCount = 0
             val baseDir = storageRepository.getScreenshotDirectory().absolutePath
