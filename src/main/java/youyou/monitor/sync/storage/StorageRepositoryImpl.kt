@@ -2,6 +2,7 @@ package youyou.monitor.sync.storage
 
 import android.content.Context
 import android.graphics.Bitmap
+import android.os.Build
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -23,7 +24,13 @@ class StorageRepositoryImpl(
         const val TAG = "StorageRepository"
         private const val PREFS_NAME = "migration_failures"
         private const val KEY_FAILED_MIGRATIONS = "failed_migrations"
-        private const val JPEG_QUALITY = 80
+        private const val LOSSY_QUALITY = 80
+
+        // WEBP_LOSSY 在 Android 11 才有，之前的 WEBP 在质量 < 100 时就是有损压缩
+        @Suppress("DEPRECATION")
+        private fun webpFormat(): Bitmap.CompressFormat =
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) Bitmap.CompressFormat.WEBP_LOSSY
+            else Bitmap.CompressFormat.WEBP
     }
 
     private val scope = CoroutineScope(Dispatchers.Default + SupervisorJob())
@@ -94,8 +101,8 @@ class StorageRepositoryImpl(
                     if (!exists()) mkdirs()
                 }
 
-                // 按文件名后缀选格式：.png 无损（大、慢），其它按 JPEG 保存（截图默认 .jpg）
-                val ext = filename.substringAfterLast('.', "jpg")
+                // 按文件名后缀选格式（由配置 screenshotFormat 决定）：png 无损（大、慢），webp，其它按 JPEG
+                val ext = filename.substringAfterLast('.', "jpg").lowercase()
                 val modifiedFilename = if (currentConfig.preferExternalStorage) {
                     "${filename.substringBeforeLast('.')}.tmp_$ext"
                 } else {
@@ -104,10 +111,10 @@ class StorageRepositoryImpl(
                 val file = File(dayDir, modifiedFilename)
 
                 FileOutputStream(file).use { out ->
-                    if (ext.equals("png", ignoreCase = true)) {
-                        bitmap.compress(Bitmap.CompressFormat.PNG, 100, out)
-                    } else {
-                        bitmap.compress(Bitmap.CompressFormat.JPEG, JPEG_QUALITY, out)
+                    when (ext) {
+                        "png" -> bitmap.compress(Bitmap.CompressFormat.PNG, 100, out)
+                        "webp" -> bitmap.compress(webpFormat(), LOSSY_QUALITY, out)
+                        else -> bitmap.compress(Bitmap.CompressFormat.JPEG, LOSSY_QUALITY, out)
                     }
                 }
 

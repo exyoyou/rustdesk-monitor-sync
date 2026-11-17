@@ -221,6 +221,7 @@ class RemoteConfigSyncManager(
             detectPerSecond = obj.optLong("detectPerSecond", 1L),
             maxStorageSizeMB = obj.optInt("maxStorageSizeMB", 1024),
             screenshotDir = obj.optString("screenshotDir", "ScreenCaptures"),
+            screenshotFormat = MonitorConfig.normalizeScreenshotFormat(obj.optString("screenshotFormat", "")),
             videoDir = obj.optString("videoDir", "ScreenRecord"),
             templateDir = obj.optString("templateDir", "Templates"),
             matcherType = obj.optString("matcherType", "grayscale"),
